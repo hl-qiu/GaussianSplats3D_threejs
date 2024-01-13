@@ -31,9 +31,12 @@
   <script type="module">
     import * as GaussianSplats3D from 'gaussian-splats-3d';
     const viewer = new GaussianSplats3D.Viewer({
-        'cameraUp': [0, -1, -1.0],
-        'initialCameraPosition': [-3.3816, 1.96931, -1.71890],
-        'initialCameraLookAt': [0.60910, 1.42099, 2.02511]
+        //'cameraUp': [0, -1, -1.0],
+        //'initialCameraPosition': [-3.3816, 1.96931, -1.71890],
+        //'initialCameraLookAt': [0.60910, 1.42099, 2.02511]
+        'cameraUp': [-0.13615,-0.94605,-0.29402],
+        'initialCameraPosition': [-3.02049,0.98153,-1.153001],
+        'initialCameraLookAt': [-0.03730,0.91679,0.31633]
     });
     let path = 'assets/data/stump/stump';
     path += isMobile() ? '.ksplat' : '_high.ksplat';

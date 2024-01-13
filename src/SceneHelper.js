@@ -342,6 +342,8 @@ export class SceneHelper {
             uniform vec3 color;
             uniform vec2 viewport;
             uniform float opacity;
+            // TODO
+            varying vec4 cov2Dv;
 
             varying vec4 ndcPosition;
             varying vec4 ndcCenter;
@@ -361,7 +363,7 @@ export class SceneHelper {
                 float radDiff = abs(projectedRadius - radius) - lineWidth;
                 float alpha = 1.0 - clamp(radDiff / 5.0, 0.0, 1.0); 
 
-                gl_FragColor = vec4(color.rgb, alpha * opacity);
+                gl_FragColor = vec4(color.rgb, alpha * opacity * cov2Dv.w);
             }
         `;
 

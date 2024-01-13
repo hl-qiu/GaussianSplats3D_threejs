@@ -133,16 +133,27 @@ export class PlyParser {
         let rawVertex = {};
 
         const propertiesToRead = ['scale_0', 'scale_1', 'scale_2', 'rot_0', 'rot_1', 'rot_2', 'rot_3',
-                                  'x', 'y', 'z', 'f_dc_0', 'f_dc_1', 'f_dc_2', 'opacity'];
+                                  'x', 'y', 'z', 'f_dc_0', 'f_dc_1', 'f_dc_2', 'opacity', 'filter_3D'];
 
         const splatArray = SplatCompressor.createEmptyUncompressedSplatArray();
 
         for (let row = 0; row < splatCount; row++) {
             this.readRawVertexFast(vertexData, row * plyRowSize, fieldOffsets, propertiesToRead, propertyTypes, rawVertex);
+            
             if (rawVertex['scale_0'] !== undefined) {
                 splatArray['scale_0'][row] = Math.exp(rawVertex['scale_0']);
                 splatArray['scale_1'][row] = Math.exp(rawVertex['scale_1']);
                 splatArray['scale_2'][row] = Math.exp(rawVertex['scale_2']);
+                if (rawVertex['filter_3D'] !== undefined){
+                    // TODO Mip splatting
+                    splatArray['scale_0'][row] = splatArray['scale_0'][row] * splatArray['scale_0'][row] + rawVertex['filter_3D'] * rawVertex['filter_3D']
+                    splatArray['scale_0'][row] = Math.sqrt(splatArray['scale_0'][row])
+                    splatArray['scale_1'][row] = splatArray['scale_1'][row] * splatArray['scale_1'][row] + rawVertex['filter_3D'] * rawVertex['filter_3D']
+                    splatArray['scale_1'][row] = Math.sqrt(splatArray['scale_1'][row])
+                    splatArray['scale_2'][row] = splatArray['scale_2'][row] * splatArray['scale_2'][row] + rawVertex['filter_3D'] * rawVertex['filter_3D']
+                    splatArray['scale_2'][row] = Math.sqrt(splatArray['scale_2'][row])
+                }
+
             } else {
                 splatArray['scale_0'][row] = 0.01;
                 splatArray['scale_1'][row] = 0.01;
@@ -160,7 +171,30 @@ export class PlyParser {
                 splatArray['f_dc_2'][row] = 0;
             }
             if (rawVertex['opacity'] !== undefined) {
-                splatArray['opacity'][row] = (1 / (1 + Math.exp(-rawVertex['opacity']))) * 255;
+                // splatArray['opacity'][row] = (1 / (1 + Math.exp(-rawVertex['opacity']))) * 255;
+                splatArray['opacity'][row] = (1 / (1 + Math.exp(-rawVertex['opacity'])));
+                if (rawVertex['filter_3D'] !== undefined){
+                    // 创建一个具有 count 个元素的 temp_scales 数组
+                    let temp_scales = new Array(3);
+                    
+                    for (let j=0; j < 3; j++){
+                        temp_scales[j] = Math.exp(rawVertex[`scale_${j}`]) * Math.exp(rawVertex[`scale_${j}`]);
+                    }
+                    // let a = Math.exp(rawVertex['scale_0']) * Math.exp(rawVertex['scale_0']);
+                    // let b = Math.exp(rawVertex['scale_0']) * Math.exp(rawVertex['scale_1']);
+                    // let c = Math.exp(rawVertex['scale_0']) * Math.exp(rawVertex['scale_2']);
+                    // let det1 = a * b * c;
+                    let det1 = temp_scales[0] * temp_scales[1] * temp_scales[2]; 
+                    for (let j=0; j < 3; j++) {
+                        temp_scales[j] = temp_scales[j] + rawVertex['filter_3D'] * rawVertex['filter_3D'];
+                    }
+                    let det2 = temp_scales[0] * temp_scales[1] * temp_scales[2];
+                    let coef = Math.sqrt(det1 / det2);
+                    splatArray['opacity'][row] = coef * splatArray['opacity'][row] * 255;
+                } else{
+                    splatArray['opacity'][row] = splatArray['opacity'][row] * 255;
+                }
+                
             }
 
             splatArray['rot_0'][row] = rawVertex['rot_0'];

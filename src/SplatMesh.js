@@ -57,6 +57,8 @@ export class SplatMesh extends THREE.Mesh {
             uniform vec2 covariancesTextureSize;
             uniform vec2 centersColorsTextureSize;
 
+            // TODO
+            varying vec4 cov2Dv;
             varying vec4 vColor;
             varying vec2 vUv;
 
@@ -112,14 +114,26 @@ export class SplatMesh extends THREE.Mesh {
                 mat3 W = transpose(mat3(modelViewMatrix));
                 mat3 T = W * J;
                 mat3 cov2Dm = transpose(T) * Vrk * T;
-                cov2Dm[0][0] += 0.3;
-                cov2Dm[1][1] += 0.3;
+                // TODO
+                // compute the coef of alpha based on the detemintant
+                float kernel_size = 0.1;
+                float det_0 = max(1e-6, cov2Dm[0][0] * cov2Dm[1][1] - cov2Dm[0][1] * cov2Dm[0][1]);
+                float det_1 = max(1e-6, (cov2Dm[0][0] + kernel_size) * (cov2Dm[1][1] + kernel_size) - cov2Dm[0][1] * cov2Dm[0][1]);
+                float coef = sqrt(det_0 / (det_1+1e-6) + 1e-6);
+            
+                if (det_0 <= 1e-6 || det_1 <= 1e-6){
+                    coef = 0.0f;
+                }
+
+                cov2Dm[0][0] += kernel_size;
+                cov2Dm[1][1] += kernel_size;
 
                 // We are interested in the upper-left 2x2 portion of the projected 3D covariance matrix because
                 // we only care about the X and Y values. We want the X-diagonal, cov2Dm[0][0],
                 // the Y-diagonal, cov2Dm[1][1], and the correlation between the two cov2Dm[0][1]. We don't
                 // need cov2Dm[1][0] because it is a symetric matrix.
-                vec3 cov2Dv = vec3(cov2Dm[0][0], cov2Dm[0][1], cov2Dm[1][1]);
+                // TODO
+                cov2Dv = vec4(cov2Dm[0][0], cov2Dm[0][1], cov2Dm[1][1], float(coef));
 
                 vec3 ndcCenter = clipCenter.xyz / clipCenter.w;
 
@@ -158,7 +172,8 @@ export class SplatMesh extends THREE.Mesh {
             #include <common>
 
             uniform vec3 debugColor;
-
+            // TODO
+            varying vec4 cov2Dv;
             varying vec4 vColor;
             varying vec2 vUv;
 
@@ -170,8 +185,9 @@ export class SplatMesh extends THREE.Mesh {
                 float A = -dot(vPosition, vPosition);
                 if (A < -4.0) discard;
                 vec3 color = vColor.rgb;
+                // TODO
                 A = exp(A) * vColor.a;
-                gl_FragColor = vec4(color.rgb, A);
+                gl_FragColor = vec4(color.rgb, A * cov2Dv.w);
             }`;
 
         const uniforms = {
